@@ -494,8 +494,23 @@ class VikingFS:
             TypedQuery,
         )
 
-        session_summary = session_info.get("summary") if session_info else None
+        session_summary = ""
         recent_messages = session_info.get("recent_messages") if session_info else None
+        if session_info:
+            summary = session_info.get("summary")
+            if isinstance(summary, str):
+                session_summary = summary.strip()
+
+            # Backward-compatible fallback for callers that still provide
+            # archive summaries as a list under "summaries".
+            if not session_summary:
+                summaries = session_info.get("summaries")
+                if isinstance(summaries, list):
+                    session_summary = "\n\n---\n\n".join(
+                        item.strip()
+                        for item in summaries
+                        if isinstance(item, str) and item.strip()
+                    )
 
         query_plan: Optional[QueryPlan] = None
 
@@ -513,7 +528,7 @@ class VikingFS:
         if session_summary or recent_messages:
             analyzer = IntentAnalyzer(max_recent_messages=5)
             query_plan = await analyzer.analyze(
-                compression_summary=session_summary or "",
+                compression_summary=session_summary,
                 messages=recent_messages or [],
                 current_message=query,
                 context_type=target_context_type,

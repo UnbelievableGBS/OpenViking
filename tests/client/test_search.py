@@ -4,6 +4,7 @@
 """Search tests"""
 
 from openviking.message import TextPart
+from openviking_cli.retrieve.types import ContextType, QueryPlan, TypedQuery
 
 
 class TestFind:
@@ -74,3 +75,54 @@ class TestSearch:
         result = await client.search(query="sample", target_uri=parent_uri)
 
         assert hasattr(result, "resources")
+
+    async def test_search_fallbacks_to_legacy_summaries(
+        self, client_with_resource_sync, monkeypatch
+    ):
+        """Regression: `search` should consume legacy `summaries` when `summary` is absent."""
+        client, _ = client_with_resource_sync
+        session = client.session()
+
+        monkeypatch.setattr(
+            session,
+            "get_context_for_search",
+            lambda _query: {
+                "summaries": ["archive summary one", "archive summary two"],
+                "recent_messages": [],
+            },
+        )
+
+        captured = {"compression_summary": ""}
+
+        async def fake_analyze(
+            _self,
+            compression_summary,
+            messages,
+            current_message=None,
+            context_type=None,
+            target_abstract="",
+        ):
+            captured["compression_summary"] = compression_summary
+            return QueryPlan(
+                queries=[
+                    TypedQuery(
+                        query=current_message or "sample",
+                        context_type=ContextType.RESOURCE,
+                        intent="test",
+                        priority=1,
+                    )
+                ],
+                session_context="test",
+                reasoning="test",
+            )
+
+        monkeypatch.setattr(
+            "openviking.retrieve.intent_analyzer.IntentAnalyzer.analyze",
+            fake_analyze,
+        )
+
+        await client.search(query="sample", session=session, limit=3)
+
+        assert captured["compression_summary"]
+        assert "archive summary one" in captured["compression_summary"]
+        assert "archive summary two" in captured["compression_summary"]

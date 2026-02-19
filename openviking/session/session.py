@@ -309,6 +309,7 @@ class Session:
             max_messages: Maximum number of messages to retrieve (default 20)
 
         Returns:
+            - summary: Combined archive summary text (str)
             - summaries: Most relevant and recent archive overview list (List[str])
             - recent_messages: Recent message list (List[Message])
         """
@@ -347,7 +348,12 @@ class Session:
             except Exception:
                 pass
 
+        summary = "\n\n---\n\n".join(
+            item.strip() for item in summaries if isinstance(item, str) and item.strip()
+        )
+
         return {
+            "summary": summary,
             "summaries": summaries,
             "recent_messages": recent_messages,
         }

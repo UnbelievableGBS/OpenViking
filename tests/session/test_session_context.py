@@ -16,7 +16,9 @@ class TestGetContextForSearch:
         context = session_with_messages.get_context_for_search(query="testing help")
 
         assert isinstance(context, dict)
-        assert "summaries" in context or "recent_messages" in context
+        assert "summary" in context
+        assert "summaries" in context
+        assert "recent_messages" in context
 
     async def test_get_context_with_max_messages(self, session_with_messages: Session):
         """Test limiting max messages"""
@@ -41,12 +43,17 @@ class TestGetContextForSearch:
         context = session.get_context_for_search(query="test", max_archives=1)
 
         assert isinstance(context, dict)
+        assert "summary" in context
+        assert "summaries" in context
+        assert len(context["summaries"]) <= 1
 
     async def test_get_context_empty_session(self, session: Session):
         """Test getting context from empty session"""
         context = session.get_context_for_search(query="test")
 
         assert isinstance(context, dict)
+        assert "summary" in context
+        assert context["summary"] == ""
 
     async def test_get_context_after_commit(self, client: AsyncOpenViking):
         """Test getting context after commit"""
@@ -66,3 +73,8 @@ class TestGetContextForSearch:
         context = session.get_context_for_search(query="test")
 
         assert isinstance(context, dict)
+        assert "summary" in context
+        assert "summaries" in context
+        assert isinstance(context["summary"], str)
+        if context["summaries"]:
+            assert context["summary"]
