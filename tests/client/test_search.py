@@ -4,6 +4,7 @@
 """Search tests"""
 
 from openviking.message import TextPart
+from openviking.session import Session
 from openviking_cli.retrieve.types import ContextType, QueryPlan, TypedQuery
 
 
@@ -84,9 +85,9 @@ class TestSearch:
         session = client.session()
 
         monkeypatch.setattr(
-            session,
+            Session,
             "get_context_for_search",
-            lambda _query: {
+            lambda self, _query: {
                 "summaries": ["archive summary one", "archive summary two"],
                 "recent_messages": [],
             },
